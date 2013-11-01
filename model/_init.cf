@@ -17,7 +17,9 @@
     Technical Contact: bart.vanbrabant@cs.kuleuven.be
 """
 
-entity Cluster
+typedef server_id  as number matching self &gt; -1 and self &lt; 4294967296
+
+entity Cluster:
     """
         Cluster consisting of one master server and one or more slaves servers
     """
@@ -27,23 +29,46 @@ entity MasterNode extends mysql::MysqlServer:
     """
         Configure one MySQL master server
     """
+	riak::server_id id
 end
 
 entity SlaveNode extends mysql::MysqlServer:
     """
         Configure one MySQL slave server
     """
+	riak::server_id id
 end
 
 Cluster cluster [0:1] -- [1:1] MasterNode master
 Cluster cluster [0:1] -- [1:] SlaveNode slaves
 
 implementation MySqlMasterNode:
-    #TODO: impl
+	# TODO: dependency maken met superklasse
+	# Adjust my.cnf config file
+	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlCluster/mycnf_master.tmpl"), requires = ???, reload = true)
+	
+	# Write nodes file
+	
+	# Write master membership management script
+	
+	# Write unit file belonging to master membership management script
+
+	# Make master membership management script a service
+	
 end
 
 implementation MySqlSlaveNode:
-    #TODO: impl
+	# Adjust my.cnf config file
+	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlCluster/mycnf_slave.tmpl"), requires = ???, reload = true)
+
+	# Write nodes file
+		
+	# Write slave membership management script
+	
+	# Write unit file belonging to slave membership management script
+
+	# Make slave membership management script a service
+	
 end
 
 implement MasterNode using MySqlMasterNode

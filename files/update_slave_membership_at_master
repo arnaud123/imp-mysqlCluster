@@ -1,0 +1,87 @@
+#!/usr/bin/python
+
+import os;
+
+USERNAME_SLAVE = "slave_user";
+PASSWORD_SLAVE_USER = "slave_user";
+
+def updateMembership():
+	if not doesSlaveUserExist():
+		createSlaveUserWithReplicationRights();
+	slavesInConfig = getSlavesInConfig();
+	slavesAlreadyInCluster = getSlavesCurrentyInCluster();
+	slavesToAdd = slavesInConfig - slavesAlreadyInCluster;
+	databases = getDatabases();
+	if (len(slavesToAdd) > 0):
+		sendRequiredDataToSlaves(slavesToAdd);
+
+def sendRequiredDataToSlaves(slaves):
+	sendDatabaseDumpsToSlaves(slaves);
+	sendMasterStatusToSlaves(slaves);
+
+def sendDatabaseDumpsToSlaves(slaves):
+	databaseNames = getDatabaseNames();
+	for name in databaseNames:
+		path = "/tmp/" + name + ".sql";
+		command = "USE " + name + ";";
+		command += "FLUSH TABLES WITH READ LOCK;";
+		command += "SYSTEM mysqldump -u root --opt " + name + " > " +  path + ";";
+		command += "UNLOCK TABLES;";
+		executeCommandInMysqlShell(command);
+		sendToSlave(path, path, slaves);
+
+def sendMasterStatusToSlaves():
+	
+	
+def sendToAllSlaves(localPath, remotePath, ips):
+	for ip in ips:
+		sendToSlave(localPath, remotePath, ip);
+
+def sendToSlave(localPath, remotePath, slaveIp):
+	os.popen("scp " + localPath + " root@" + slaveIp + ":" + remotePath);
+
+def getSlavesInConfig():
+	filestream = open("/etc/sysconfig/mysqlCluster","r");
+	slaves = set();
+	for line in filestream:
+		if (line.find("slave") != -1):
+			line = line.strip("\n ");
+			slave = line.split(" ")[1];
+			slave = slave.strip(" ");
+			slaves.add(slave);
+	filestream.close();
+	return slaves;
+
+def getSlavesCurrentlyInCluster():
+	#TODO: implementeren
+
+def getDatabaseNames():
+	filestream = open("/etc/sysconfig/mysql","r");
+	databases = set();
+	for line in filestream:
+		if (line.find("hasdb") != -1):
+			line.strip("\n ");
+			database = line.split(" ")[1];
+			database = database.strip(" ");
+			databases.add(database);
+	filestream.close();
+	return databases;
+
+def doesSlaveUserExist():
+	command = "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '" + SLAVE_USER + "');";
+	if (executeCommandInMysqlShell(command) == 1):
+		return True:
+	else:
+		return False;
+
+def createSlaveUserWithReplicationRights():
+	grantCommand = "GRANT REPLICATION SLAVE ON *.* TO '" + USERNAME_SLAVE + "'@'%' IDENTIFIED BY '" + PASSWORD_SLAVE_USER  + "';";
+	flushCommand = "FLUSH PRIVILEGES;";
+	executeCommandInMysqlShell(grantCommand);
+	executeCommandInMysqlShell(flushCommand);
+
+def executeCommandInMysqlShell(mysqlCommand):
+	shellCommand = "/usr/bin/mysql -uroot -s -e \" + mysqlCommand  + \"';
+	return os.popen(shellCommand).read();
+
+updateMembership();
