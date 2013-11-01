@@ -31,9 +31,32 @@ def sendDatabaseDumpsToSlaves(slaves):
 		executeCommandInMysqlShell(command);
 		sendToAllSlaves(path, path, slaves);
 
-def sendMasterStatusToSlaves():
-	#TODO: implementeren
-	return;
+#TESTED
+def sendMasterStatusToSlaves(slaves):
+	command = "SHOW MASTER STATUS\G";
+	output = executeCommandInMysqlShell(command);
+	binLog = findEntryInMasterStatus(output, "File");
+	position = findEntryInMasterStatus(output, "Position");
+	path = "/tmp/master_status";
+	writeStringToFile(path, binLog + "&" + position);
+	sendToAllSlaves(path, path, slaves);
+
+#TESTED
+def writeStringToFile(path, str):
+	file = open(path,"w");
+	file.write(str);
+	file.close();
+
+#TESTED
+def findEntryInMasterStatus(status, section):
+	entries = status.split("\n");
+	for entry in entries:
+		if (entry.find(section) != -1):
+			result = entry.strip("\n ");
+			result = result.split(":")[1];
+			return result.strip(" ");
+	raise "Section not found in status", section;
+
 	
 #TESTED	
 def sendToAllSlaves(localPath, remotePath, ips):
@@ -44,6 +67,7 @@ def sendToAllSlaves(localPath, remotePath, ips):
 def sendToSlave(localPath, remotePath, slaveIp):
 	os.popen("scp " + localPath + " root@" + slaveIp + ":" + remotePath);
 
+#TESTED
 def getSlavesInConfig():
 	filestream = open("/etc/sysconfig/mysqlCluster","r");
 	slaves = set();
@@ -94,3 +118,6 @@ def executeCommandInMysqlShell(mysqlCommand):
 	return os.popen(shellCommand).read();
 
 #updateMembership();
+slaves = set(["192.168.1.8"]);
+sendDatabaseDumpsToSlaves(slaves);
+sendMasterStatusToSlaves(slaves);
