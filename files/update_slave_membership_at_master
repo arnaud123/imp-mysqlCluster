@@ -5,16 +5,17 @@ import os;
 USERNAME_SLAVE = "slave_user";
 PASSWORD_SLAVE_USER = "slave_user";
 
+#TESTED
 def updateMembership():
 	if not doesSlaveUserExist():
 		createSlaveUserWithReplicationRights();
 	slavesInConfig = getSlavesInConfig();
-	slavesAlreadyInCluster = getSlavesCurrentyInCluster();
+	slavesAlreadyInCluster = getSlavesCurrentlyInCluster();
 	slavesToAdd = slavesInConfig - slavesAlreadyInCluster;
-	databases = getDatabases();
 	if (len(slavesToAdd) > 0):
 		sendRequiredDataToSlaves(slavesToAdd);
 
+#TESTED
 def sendRequiredDataToSlaves(slaves):
 	sendDatabaseDumpsToSlaves(slaves);
 	sendMasterStatusToSlaves(slaves);
@@ -82,7 +83,7 @@ def getSlavesInConfig():
 
 def getSlavesCurrentlyInCluster():
 	#TODO: implementeren
-	return;
+	return set();
 
 #TESTED
 def getDatabaseNames():
@@ -117,7 +118,4 @@ def executeCommandInMysqlShell(mysqlCommand):
 	shellCommand = "/usr/bin/mysql -uroot -s -e \"" + mysqlCommand  + "\"";
 	return os.popen(shellCommand).read();
 
-#updateMembership();
-slaves = set(["192.168.1.8"]);
-sendDatabaseDumpsToSlaves(slaves);
-sendMasterStatusToSlaves(slaves);
+updateMembership();
