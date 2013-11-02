@@ -43,35 +43,62 @@ Cluster cluster [0:1] -- [1:1] MasterNode master
 Cluster cluster [0:1] -- [1:] SlaveNode slaves
 
 implementation MySqlMasterNode:
-	# TODO: dependency maken met superklasse
+
+	# Dependency with super entity
+	mycnf_mysqlServer_entity = std::File[host = self.host, path = "/etc/my.cnf"]
+	create_db_script_mysqlServer_entity = std::Service[host = self.host, name = "mysql_create_db"]
+	mysqld_service = std::Service[host = self.host, name = "mysqld"]
+
 	# Adjust my.cnf config file
-	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlCluster/mycnf_master.tmpl"), requires = ???, reload = true)
+	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlClusiter/mycnf_master.tmpl"), 
+	requires = [mycnf_mysqlServer_entity, create_db_script_mysqlServer_entity, mysqld_service], reload = true)
 	
 	# Write nodes file
+	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
+        content = template("mysqlCluster/nodes.tmpl"))
 	
 	# Write master membership management script
+	master_script = std::File(host = self.host, path = "/usr/bin/send_state_to_new_slaves", owner = "root", group = "root",
+        mode = 755, content = file("mysqlCluster/send_state_to_new_slaves"))
 	
 	# Write unit file belonging to master membership management script
+	master_unit_file = std::File(host = self.host, path = "/lib/systemd/system/send_state_to_new_slaves.service", owner = "root",
+        group = "root", mode = 644, content = file("mysqlCluster/send_state_to_new_slaves.service"))
 
 	# Make master membership management script a service
+	master_service = std::Service(host = self.host, name = "send_state_to_new_slaves", state = "running", onboot = true,
+        requires = [nodeFile, master_script, master_unit_file, mycnf])
 	
 end
 
 implementation MySqlSlaveNode:
+
+	# Dependency with super entity
+	mycnf_mysqlServer_entity = std::File[host = self.host, path = "/etc/my.cnf"]
+	create_db_script_mysqlServer_entity = std::Service[host = self.host, name = "mysql_create_db"]
+	mysqld_service = std::Service[host = self.host, name = "mysqld"]
+
 	# Adjust my.cnf config file
-	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlCluster/mycnf_slave.tmpl"), requires = ???, reload = true)
+	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlCluster/mycnf_slave.tmpl"), 
+	requires = [mycnf_mysqlServer_entity, create_db_script_mysqlServer_entity, mysqld_service], reload = true)
 
 	# Write nodes file
+	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
+        content = template("mysqlCluster/nodes.tmpl"))
 		
 	# Write slave membership management script
-	
+	slave_script = std::File(host = self.host, path = "/usr/bin/synchronize_state_with_master", owner = "root", group = "root",
+	mode = 755, content = file("mysqlCluster/synchronize_state_with_master"))
+
 	# Write unit file belonging to slave membership management script
+	slave_unit_file = std::File(host = self.host, path = "/lib/systemd/system/synchronize_state_with_master.service", owner = "root",
+        group = "root", mode = 644, content = file("mysqlCluster/synchronize_state_with_master.service"))
 
 	# Make slave membership management script a service
+	slave_service = std::Service(host = self.host, name = "synchronize_state_with_master", state = "running", onboot = true,
+        requires = [nodeFile, slave_script, slave_unit_file, mycnf])
 	
 end
-
-
 
 implement MasterNode using MySqlMasterNode
 implement SlaveNode using MySqlSlaveNode

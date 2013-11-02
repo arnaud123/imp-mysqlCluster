@@ -1,0 +1,13 @@
+[Unit]
+Description=Sends the state of the master node to the new slave nodes
+After=mysql_create_db.service
+
+[Service]
+Type=simple
+User=mysql
+Group=mysql
+
+ExecStart=/usr/bin/send_state_to_new_slaves
+
+[Install]
+WantedBy=multi-user.target

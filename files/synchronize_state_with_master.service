@@ -1,0 +1,13 @@
+[Unit]
+Description=Synchronizes the state of the slave node with the master node
+After=mysql_create_db.service
+
+[Service]
+Type=simple
+User=mysql
+Group=mysql
+
+ExecStart=/usr/bin/synchronize_state_with_master
+
+[Install]
+WantedBy=multi-user.target
