@@ -7,8 +7,7 @@ PASSWORD_SLAVE_USER = "slave_user";
 
 #TESTED
 def updateMembership():
-	if not doesSlaveUserExist():
-		createSlaveUserWithReplicationRights();
+	createSlaveUserWithReplicationRights();
 	slavesInConfig = getSlavesInConfig();
 	slavesAlreadyInCluster = getSlavesCurrentlyInCluster();
 	slavesToAdd = slavesInConfig - slavesAlreadyInCluster;
@@ -99,14 +98,7 @@ def getDatabaseNames():
 	return databases;
 
 #TESTED
-def doesSlaveUserExist():
-	command = "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '" + USERNAME_SLAVE + "');";
-	if (executeCommandInMysqlShell(command) == 1):
-		return True;
-	else:
-		return False;
-
-#TESTED
+# This operation is idempotent
 def createSlaveUserWithReplicationRights():
 	grantCommand = "GRANT REPLICATION SLAVE ON *.* TO '" + USERNAME_SLAVE + "'@'%' IDENTIFIED BY '" + PASSWORD_SLAVE_USER  + "';";
 	flushCommand = "FLUSH PRIVILEGES;";
@@ -119,3 +111,5 @@ def executeCommandInMysqlShell(mysqlCommand):
 	return os.popen(shellCommand).read();
 
 updateMembership();
+
+#TODO: add server restart

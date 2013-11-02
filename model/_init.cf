@@ -71,6 +71,8 @@ implementation MySqlSlaveNode:
 	
 end
 
+
+
 implement MasterNode using MySqlMasterNode
 implement SlaveNode using MySqlSlaveNode
 implement Cluster using std::none
