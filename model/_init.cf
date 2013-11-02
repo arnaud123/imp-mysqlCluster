@@ -17,7 +17,7 @@
     Technical Contact: bart.vanbrabant@cs.kuleuven.be
 """
 
-typedef server_id  as number matching self &gt; -1 and self &lt; 4294967296
+typedef server_id as number matching self >= 0 and self <= 4294967295
 
 entity Cluster:
     """
@@ -29,29 +29,29 @@ entity MasterNode extends mysql::MysqlServer:
     """
         Configure one MySQL master server
     """
-	riak::server_id id
+	mysqlCluster::server_id id
 end
 
 entity SlaveNode extends mysql::MysqlServer:
     """
         Configure one MySQL slave server
     """
-	riak::server_id id
+	mysqlCluster::server_id id
 end
 
 Cluster cluster [0:1] -- [1:1] MasterNode master
 Cluster cluster [0:1] -- [1:] SlaveNode slaves
 
-implementation MySqlMasterNode:
+implementation mysqlMasterNode:
 
 	# Dependency with super entity
-	mycnf_mysqlServer_entity = std::File[host = self.host, path = "/etc/my.cnf"]
-	create_db_script_mysqlServer_entity = std::Service[host = self.host, name = "mysql_create_db"]
-	mysqld_service = std::Service[host = self.host, name = "mysqld"]
+	mycnf_super_entity = std::File[host = self.host, path = "/etc/my.cnf"]
+	#create_db_super_entity = std::Service[host = self.host, name = "mysql_create_db"]
+	#mysqld_service = std::Service[host = self.host, name = "mysqld"]
 
 	# Adjust my.cnf config file
-	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlClusiter/mycnf_master.tmpl"), 
-	requires = [mycnf_mysqlServer_entity, create_db_script_mysqlServer_entity, mysqld_service], reload = true)
+	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlCluster/mycnf_master.tmpl"), 
+	requires = mycnf_super_entity, reload = true)
 	
 	# Write nodes file
 	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
@@ -71,16 +71,16 @@ implementation MySqlMasterNode:
 	
 end
 
-implementation MySqlSlaveNode:
+implementation mysqlSlaveNode:
 
 	# Dependency with super entity
-	mycnf_mysqlServer_entity = std::File[host = self.host, path = "/etc/my.cnf"]
-	create_db_script_mysqlServer_entity = std::Service[host = self.host, name = "mysql_create_db"]
-	mysqld_service = std::Service[host = self.host, name = "mysqld"]
+	mycnf_super_entity = std::File[host = self.host, path = "/etc/my.cnf"]
+	#create_db_super_entity = std::Service[host = self.host, name = "mysql_create_db"]
+	#mysqld_service = std::Service[host = self.host, name = "mysqld"]
 
 	# Adjust my.cnf config file
 	mycnf = std::ConfigFile(host = self.host, path = "/etc/my.cnf", content = template("mysqlCluster/mycnf_slave.tmpl"), 
-	requires = [mycnf_mysqlServer_entity, create_db_script_mysqlServer_entity, mysqld_service], reload = true)
+	requires = mycnf_super_entity, reload = true)
 
 	# Write nodes file
 	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
@@ -100,6 +100,6 @@ implementation MySqlSlaveNode:
 	
 end
 
-implement MasterNode using MySqlMasterNode
-implement SlaveNode using MySqlSlaveNode
+implement MasterNode using mysqlMasterNode
+implement SlaveNode using mysqlSlaveNode
 implement Cluster using std::none
