@@ -50,7 +50,7 @@ implementation mysqlMasterNode:
 	confd_dir = std::Directory[host = self.host, path = "/etc/mysql.conf.d"]
 
 	# Adjust my.cnf config file
-	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension_master", 
+	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension_master.cnf", 
 	content = template("mysqlCluster/mycnf_extension_master.tmpl"), requires = [mycnf,confd_dir], reload = true)
 	
 	# Write nodes file
@@ -79,7 +79,7 @@ implementation mysqlSlaveNode:
 	confd_dir = std::Directory[host = self.host, path = "/etc/mysql.conf.d"]
 
 	# Adjust my.cnf config file
-	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension_slave", 
+	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension_slave.cnf", 
 	content = template("mysqlCluster/mycnf_extension_slave.tmpl"), requires = [mycnf,confd_dir], reload = true)
 
 	# Write nodes file
