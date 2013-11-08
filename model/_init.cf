@@ -17,8 +17,6 @@
     Technical Contact: bart.vanbrabant@cs.kuleuven.be
 """
 
-typedef server_id as number matching self >= 0 and self <= 4294967295
-
 entity Cluster:
     """
         Cluster consisting of one master server and one or more slaves servers
@@ -29,14 +27,14 @@ entity MasterNode extends mysql::MysqlServer:
     """
         Configure one MySQL master server
     """
-	mysqlCluster::server_id id
+	string id
 end
 
 entity SlaveNode extends mysql::MysqlServer:
     """
         Configure one MySQL slave server
     """
-	mysqlCluster::server_id id
+	string id
 end
 
 Cluster cluster [0:1] -- [1] MasterNode master
@@ -48,10 +46,11 @@ implementation mysqlMasterNode:
 	mycnf = std::File[host = self.host, path = "/etc/my.cnf"]
 	create_db_service = std::Service[host = self.host, name = "mysql_create_db"]
 	confd_dir = std::Directory[host = self.host, path = "/etc/mysql.conf.d"]
+	mysqld = std::Service[host = self.host, name = "mysqld"]
 
 	# Adjust my.cnf config file
 	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension_master.cnf", 
-	content = template("mysqlCluster/mycnf_extension_master.tmpl"), requires = [mycnf,confd_dir], reload = true)
+	content = template("mysqlCluster/mycnf_extension_master.tmpl"), requires = [mycnf,confd_dir,mysqld], reload = true)
 	
 	# Write nodes file
 	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
@@ -77,10 +76,11 @@ implementation mysqlSlaveNode:
 	mycnf = std::File[host = self.host, path = "/etc/my.cnf"]
 	create_db_service = std::Service[host = self.host, name = "mysql_create_db"]
 	confd_dir = std::Directory[host = self.host, path = "/etc/mysql.conf.d"]
+	mysqld = std::Service[host = self.host, name = "mysqld"]
 
 	# Adjust my.cnf config file
 	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension_slave.cnf", 
-	content = template("mysqlCluster/mycnf_extension_slave.tmpl"), requires = [mycnf,confd_dir], reload = true)
+	content = template("mysqlCluster/mycnf_extension_slave.tmpl"), requires = [mycnf,confd_dir,mysqld], reload = true)
 
 	# Write nodes file
 	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
