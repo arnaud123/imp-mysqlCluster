@@ -4,11 +4,13 @@ import os;
 
 USERNAME_SLAVE = "slave_user";
 PASSWORD_SLAVE_USER = "slave_user";
+CLUSTER_MEMBER_CONFIG = "/etc/sysconfig/mysqlCluster";
+DATABASES_CONFIG = "/etc/sysconfig/mysql";
 
 #TESTED
 def updateMembership():
 	createSlaveUserWithReplicationRights();
-	slavesInConfig = getSlavesInConfig();
+	slavesInConfig = getEntriesInConfigFile("slave", CLUSTER_MEMBER_CONFIG);
 	slavesAlreadyInCluster = getSlavesCurrentlyInCluster();
 	slavesToAdd = slavesInConfig - slavesAlreadyInCluster;
 	if (len(slavesToAdd) > 0):
@@ -21,7 +23,7 @@ def sendRequiredDataToSlaves(slaves):
 
 #TESTED
 def sendDatabaseDumpsToSlaves(slaves):
-	databaseNames = getDatabaseNames();
+	databaseNames = getEntriesInConfigFile("hasdb", DATABASES_CONFIG);
 	for name in databaseNames:
 		path = "/tmp/" + name + ".sql";
 		command = "USE " + name + ";";
@@ -42,10 +44,10 @@ def sendMasterStatusToSlaves(slaves):
 	sendToAllSlaves(path, path, slaves);
 
 #TESTED
-def writeStringToFile(path, str):
-	file = open(path,"w");
-	file.write(str);
-	file.close();
+def writeStringToFile(path, content):
+	fileStream = open(path,"w");
+	fileStream.write(content);
+	fileStream.close();
 
 #TESTED
 def findEntryInMasterStatus(status, section):
@@ -57,7 +59,6 @@ def findEntryInMasterStatus(status, section):
 			return result.strip(" ");
 	raise "Section not found in status", section;
 
-	
 #TESTED	
 def sendToAllSlaves(localPath, remotePath, ips):
 	for ip in ips:
@@ -68,34 +69,22 @@ def sendToSlave(localPath, remotePath, slaveIp):
 	os.popen("scp " + localPath + " root@" + slaveIp + ":" + remotePath);
 
 #TESTED
-def getSlavesInConfig():
-	filestream = open("/etc/sysconfig/mysqlCluster","r");
-	slaves = set();
+def getEntriesInConfigFile(label, pathToConfigFile):
+	filestream = open(pathToConfigFile,"r");
+	result = set();
 	for line in filestream:
-		if (line.find("slave") != -1):
+		if (line.find(label) != -1):
 			line = line.strip("\n ");
-			slave = line.split(" ")[1];
-			slave = slave.strip(" ");
-			slaves.add(slave);
+			resultItem = line.split(" ")[1];
+			resultItem = resultItem.strip(" ");
+			result.add(resultItem);
 	filestream.close();
-	return slaves;
+	return result;
 
+# Te veel data doorsturen is niet erg.
 def getSlavesCurrentlyInCluster():
 	#TODO: implementeren
 	return set();
-
-#TESTED
-def getDatabaseNames():
-	filestream = open("/etc/sysconfig/mysql","r");
-	databases = set();
-	for line in filestream:
-		if (line.find("hasdb") != -1):
-			line.strip("\n ");
-			database = line.split(" ")[1];
-			database = database.strip(" ");
-			databases.add(database);
-	filestream.close();
-	return databases;
 
 #TESTED
 # This operation is idempotent
@@ -111,5 +100,3 @@ def executeCommandInMysqlShell(mysqlCommand):
 	return os.popen(shellCommand).read();
 
 updateMembership();
-
-#TODO: add server restart

@@ -4,6 +4,8 @@ import os;
 
 SLAVE_USER = "slave_user";
 SLAVE_PASSWORD = "slave_user";
+CLUSTER_MEMBER_CONFIG = "/etc/sysconfig/mysqlCluster";
+DATABASES_CONFIG = "/etc/sysconfig/mysql";
 
 def configureSlaveForReplication():
 	importDatabaseDumps();
@@ -12,7 +14,7 @@ def configureSlaveForReplication():
 
 #TESTED
 def importDatabaseDumps():
-	databaseNames = getDatabaseNames();
+	databaseNames = getEntriesInConfigFile("hasdb", DATABASES_CONFIG);
 	for database in databaseNames:
 		createDbCommand = "CREATE DATABASE IF NOT EXISTS " + database + ";";
 		executeCommandInMysqlShell(createDbCommand);
@@ -20,7 +22,7 @@ def importDatabaseDumps():
 		os.popen(importDumpCommand);
 
 def setMaster():
-	masterIp = getMasterIpFromConfigFile();
+	masterIp = getEntryInConfigFile("master", CLUSTER_MEMBER_CONFIG);
 	positionInBinLog = getPositionInBinLog();
 	binLogFileName = getBinLogFileName();
 	command = "CHANGE MASTER TO MASTER_HOST='" + masterIp  + "',"; 
@@ -36,54 +38,53 @@ def startSlave():
 
 #TESTED
 def executeCommandInMysqlShell(mysqlCommand):
-        shellCommand = "/usr/bin/mysql -uroot -s -e \"" + mysqlCommand  + "\"";
-        return os.popen(shellCommand).read();
+	shellCommand = "/usr/bin/mysql -uroot -s -e \"" + mysqlCommand  + "\"";
+	return os.popen(shellCommand).read();
 
 #TESTED
-def getDatabaseNames():
-	filestream = open("/etc/sysconfig/mysql","r");
-        databases = set();
-        for line in filestream:
-                if (line.find("hasdb") != -1):
-                        line.strip("\n ");
-                        database = line.split(" ")[1];
-                        database = database.strip(" ");
-                        databases.add(database);
-        filestream.close();
-        return databases;
+def getEntriesInConfigFile(label, pathToConfigFile):
+	filestream = open(pathToConfigFile,"r");
+	result = set();
+	for line in filestream:
+		if (line.find(label) != -1):
+			line = line.strip("\n ");
+			resultItem = line.split(" ")[1];
+			resultItem = resultItem.strip(" ");
+			result.add(resultItem);
+	filestream.close();
+	return result;
+
+def getEntryInConfigFile(label, pathToConfigFile):
+	entries = getEntriesInConfigFile(label, pathToConfigFile);
+	if len(entries) < 1:
+		raise "No entry found in config file " + pathToConfigFile;
+	if len(entries) > 1:
+		raise "More than one entry found in config file: ", entries;
+	return entries.pop();
 
 #TESTED
 def getBinLogFileName():
-	filestream = open("/tmp/master_status","r");
-	line = filestream.readline();
-	line = line.split("&")[0];
-	line = line.strip("\n ");
-	filestream.close();
-	return line;
-
+	return getMasterStatus(0);
+	
 #TESTED
 def getPositionInBinLog():
+	return getMasterStatus(1);
+
+# File Fomat: <<binLogFileName>> + & <<positionInBinLog>>
+def getMasterStatus(part):
 	filestream = open("/tmp/master_status","r");
 	line = filestream.readline();
-	line = line.split("&")[1];
+	line = line.split("&")[part];
 	line = line.strip("\n ");
 	filestream.close();
 	return line;
 
-#TESTED
-def getMasterIpFromConfigFile():
-	filestream = open("/etc/sysconfig/mysqlCluster","r");
-	result = "";
-	for line in filestream:
-		if (line.find("master") != -1):
-			line = line.strip("\n ");
-			line = line.split(" ")[1];
-			result = line.strip(" ");
-	filestream.close();
-	if not result:
-		raise "No master entry found in config file /etc/sysconfig/mysqlCluster";
-	return result;
+def isSlaveRunning():
+	commandResult = executeCommandInMysqlShell("SHOW SLAVE STATUS\G");
+	if(commandResult.find("Slave_IO_Running: Yes") != -1 and commandResult.find("Slave_SQL_Running: Yes") != -1):
+		return True;
+	return False;
 
 configureSlaveForReplication();
-
+	
 #TODO add server restart
