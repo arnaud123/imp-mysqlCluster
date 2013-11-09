@@ -43,14 +43,13 @@ Cluster cluster [0:1] -- [1:] SlaveNode slaves
 implementation mysqlMasterNode:
 
 	# Dependency with mysql entity
-	mycnf = std::File[host = self.host, path = "/etc/my.cnf"]
 	create_db_service = std::Service[host = self.host, name = "mysql_create_db"]
 	confd_dir = std::Directory[host = self.host, path = "/etc/mysql.conf.d"]
 	mysqld = std::Service[host = self.host, name = "mysqld"]
 
 	# Adjust my.cnf config file
-	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension_master.cnf", 
-	content = template("mysqlCluster/mycnf_extension_master.tmpl"), requires = [mycnf,confd_dir,mysqld], reload = true)
+	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension.cnf", 
+	content = template("mysqlCluster/mycnf_extension_master.tmpl"), requires = [confd_dir], reload = true)
 	
 	# Write nodes file
 	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
@@ -66,21 +65,20 @@ implementation mysqlMasterNode:
 
 	# Make master membership management script a service
 	master_service = std::Service(host = self.host, name = "send_state_to_new_slaves", state = "running", onboot = true,
-        requires = [nodeFile, master_script, master_unit_file, mycnfExtension, create_db_service])
+        requires = [nodeFile, master_script, master_unit_file, mycnfExtension, mysqld, create_db_service])
 	
 end
 
 implementation mysqlSlaveNode:
 
 	# Dependency with mysql entity
-	mycnf = std::File[host = self.host, path = "/etc/my.cnf"]
 	create_db_service = std::Service[host = self.host, name = "mysql_create_db"]
 	confd_dir = std::Directory[host = self.host, path = "/etc/mysql.conf.d"]
 	mysqld = std::Service[host = self.host, name = "mysqld"]
 
 	# Adjust my.cnf config file
-	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension_slave.cnf", 
-	content = template("mysqlCluster/mycnf_extension_slave.tmpl"), requires = [mycnf,confd_dir,mysqld], reload = true)
+	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension.cnf", 
+	content = template("mysqlCluster/mycnf_extension_slave.tmpl"), requires = [confd_dir], reload = true)
 
 	# Write nodes file
 	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
@@ -96,14 +94,17 @@ implementation mysqlSlaveNode:
 
 	# Make slave membership management script a service
 	slave_service = std::Service(host = self.host, name = "synchronize_state_with_master", state = "running", onboot = true,
-        requires = [nodeFile, slave_script, slave_unit_file, mycnfExtension, create_db_service])
+        requires = [nodeFile, slave_script, slave_unit_file, mycnfExtension, mysqld, create_db_service])
 end
 
 implementation mysql:
+    # Dependency with other entities
+    mycnf_extension = std::File[host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension.cnf"]
+
     # install mysql server
     pkg = std::Package(host = host, name = "mysql-server", state = "installed")
     svc = std::Service(host = host, name = "mysqld", state = "running", onboot = true)
-    svc.requires = [pkg, config, conf_dir]
+    svc.requires = [pkg, config, conf_dir, mycnf_extension]
 
     config = std::ConfigFile(host = host, path = "/etc/my.cnf", content = template("mysqlCluster/my.cnf.tmpl"), 
     requires = pkg, reload = true)
