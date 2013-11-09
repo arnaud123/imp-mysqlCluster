@@ -4,8 +4,8 @@ After=mysql_create_db.service
 
 [Service]
 Type=simple
-User=mysql
-Group=mysql
+User=root
+Group=root
 
 ExecStart=/usr/bin/synchronize_state_with_master
 
