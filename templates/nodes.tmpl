@@ -2,3 +2,4 @@ master {{ cluster.master.host.ip }}
 {% for slave in cluster.slaves %}
 slave {{slave.host.ip}}
 {% endfor %}
+self {{host.ip}}

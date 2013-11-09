@@ -85,6 +85,14 @@ def isSlaveRunning():
 		return True;
 	return False;
 
+def doesThisNodeBelongToCluster():
+	slaves = getEntriesInConfigFile("slave", CLUSTER_MEMBER_CONFIG);
+	thisNode = getEntryInConfigFile("self", CLUSTER_MEMBER_CONFIG);
+	return doesSetContainEntry(slaves, thisNode);
+
+def doesSetContainEntry(aSet, entry):
+	entryAsSet = set([entry]);
+	intersectionOfSets = aSet.intersection(entryAsSet);
+	return len(intersectionOfSets) != 0;
+
 configureSlaveForReplication();
-	
-#TODO add server restart
