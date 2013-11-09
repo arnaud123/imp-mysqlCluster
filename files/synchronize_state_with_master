@@ -8,9 +8,13 @@ CLUSTER_MEMBER_CONFIG = "/etc/sysconfig/mysqlCluster";
 DATABASES_CONFIG = "/etc/sysconfig/mysql";
 
 def configureSlaveForReplication():
-	importDatabaseDumps();
-	setMaster();
-	startSlave();
+	if doesThisNodeBelongToCluster():
+		stopSlave();
+		importDatabaseDumps();
+		setMaster();
+		startSlave();
+	else:
+		stopSlave();
 
 #TESTED
 def importDatabaseDumps():
@@ -35,6 +39,9 @@ def setMaster():
 #TESTED
 def startSlave():
 	executeCommandInMysqlShell("START SLAVE");
+
+def stopSlave():
+	executeCommandInMysqlShell("STOP SLAVE");
 
 #TESTED
 def executeCommandInMysqlShell(mysqlCommand):
