@@ -116,7 +116,7 @@ end
 
 implementation systemdCreate:
     # Dependency with mysql entity
-    mysqld = std::Service[host = self.host, name = "mysql-server"]
+    mysqld = std::Service[host = self.host, name = "mysqld"]
 
     # install mysql db create script
     unit_file = std::File(host = host, path = "/lib/systemd/system/mysql_create_db.service", owner = "root",
