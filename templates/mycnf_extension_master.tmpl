@@ -1,4 +1,6 @@
 [mysqld]
 server-id={{id | int}}
 log_bin=mysql-bin
-{% for db in databases %}binlog_do_db={{ db.name }} {% endfor %}
+{% for db in databases %}
+binlog_do_db={{ db.name }}
+{% endfor %}
