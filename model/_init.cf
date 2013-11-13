@@ -17,6 +17,8 @@
     Technical Contact: bart.vanbrabant@cs.kuleuven.be
 """
 
+typedef server_id as number matching self >= 0 and self <= 4294967295
+
 entity Cluster:
     """
         Cluster consisting of one master server and one or more slaves servers
@@ -27,14 +29,14 @@ entity MasterNode extends mysql::MysqlServer:
     """
         Configure one MySQL master server
     """
-	string id
+	server_id id
 end
 
 entity SlaveNode extends mysql::MysqlServer:
     """
         Configure one MySQL slave server
     """
-	string id
+	server_id id
 end
 
 Cluster cluster [0:1] -- [1] MasterNode master
