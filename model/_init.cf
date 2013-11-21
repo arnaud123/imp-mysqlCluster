@@ -25,14 +25,14 @@ entity Cluster:
     """
 end
 
-entity MasterNode:
+entity MasterNode extends ip::services::Server:
     """
         Configure one MySQL master server
     """
 	server_id id
 end
 
-entity SlaveNode:
+entity SlaveNode extends ip::services::Server:
     """
         Configure one MySQL slave server
     """
