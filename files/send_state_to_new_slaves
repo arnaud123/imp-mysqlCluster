@@ -11,10 +11,8 @@ DATABASES_CONFIG = "/etc/sysconfig/mysql";
 def updateMembership():
 	createSlaveUserWithReplicationRights();
 	slavesInConfig = getEntriesInConfigFile("slave", CLUSTER_MEMBER_CONFIG);
-	slavesAlreadyInCluster = getSlavesCurrentlyInCluster();
-	slavesToAdd = slavesInConfig - slavesAlreadyInCluster;
-	if (len(slavesToAdd) > 0):
-		sendRequiredDataToSlaves(slavesToAdd);
+	if (len(slavesInConfig) > 0):
+		sendRequiredDataToSlaves(slavesInConfig);
 
 #TESTED
 def sendRequiredDataToSlaves(slaves):
@@ -80,11 +78,6 @@ def getEntriesInConfigFile(label, pathToConfigFile):
 			result.add(resultItem);
 	filestream.close();
 	return result;
-
-# Te veel data doorsturen is niet erg.
-def getSlavesCurrentlyInCluster():
-	#TODO: implementeren
-	return set();
 
 #TESTED
 # This operation is idempotent
