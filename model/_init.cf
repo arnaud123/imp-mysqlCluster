@@ -14,7 +14,7 @@
     limitations under the License.
 
     Administrative Contact: dnet-project-office@cs.kuleuven.be
-    Technical Contact: bart.vanbrabant@cs.kuleuven.be
+    Technical Contact: arnaud.schoonjans@student.kuleuven.be
 """
 
 typedef server_id as number matching self >= 0 and self <= 4294967295
@@ -25,22 +25,29 @@ entity Cluster:
     """
 end
 
-entity MasterNode extends mysql::MysqlServer:
+entity MasterNode:
     """
         Configure one MySQL master server
     """
 	server_id id
 end
 
-entity SlaveNode extends mysql::MysqlServer:
+entity SlaveNode:
     """
         Configure one MySQL slave server
     """
 	server_id id
 end
 
+entity Database:
+    string name
+    string user
+    string password
+end
+
 Cluster cluster [0:1] -- [1] MasterNode master
 Cluster cluster [0:1] -- [1:] SlaveNode slaves
+Cluster cluster [0:1] -- [1:] Database databases
 
 implementation mysqlMasterNode:
 
@@ -144,6 +151,7 @@ implement MasterNode using sysvCreate when host.os is "centos"
 implement SlaveNode using sysvCreate when host.os is "centos"
 
 implement Cluster using std::none
+implement Database using std::none
 implement MasterNode using mysqlMasterNode,mysql
 implement SlaveNode using mysqlSlaveNode,mysql
 
