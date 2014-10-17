@@ -14,7 +14,7 @@
     limitations under the License.
 
     Administrative Contact: dnet-project-office@cs.kuleuven.be
-    Technical Contact: arnaud.schoonjans@student.kuleuven.be
+    Technical Contact: arnaud.schoonjans@cs.kuleuven.be
 """
 
 typedef server_id as number matching self >= 0 and self <= 4294967295
@@ -111,7 +111,7 @@ implementation mysql:
     mycnf_extension = std::File[host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension.cnf"]
 
     # install mysql server
-    pkg = std::Package(host = host, name = "mysql-server", state = "installed")
+    pkg = std::Package(host = host, name = "community-mysql-server.x86_64", state = "installed")
     svc = std::Service(host = host, name = "mysqld", state = "running", onboot = true)
     svc.requires = [pkg, config, conf_dir, mycnf_extension]
 
