@@ -1,0 +1,8 @@
+vm1 = ip::Host(name = "dbase_db1", os = redhat::fedora20, ip = "172.16.8.170")
+vm2 = ip::Host(name = "dbase_db2", os = redhat::fedora20, ip = "172.16.8.171")
+vm3 = ip::Host(name = "dbase_db3", os = redhat::fedora20, ip = "172.16.8.173")
+master = mysqlCluster::MasterNode(host = vm1, id=0)
+slave1 = mysqlCluster::SlaveNode(host = vm2, id=1)
+slave2 = mysqlCluster::SlaveNode(host = vm3, id=2)
+database = mysqlCluster::Database(name="ycsb_database", user="ycsb", password="ycsb")
+mysqlCluster::Cluster(master=master, slaves=[slave1,slave2], databases=[database])

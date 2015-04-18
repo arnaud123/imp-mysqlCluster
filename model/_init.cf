@@ -49,7 +49,7 @@ Cluster cluster [0:1] -- [1] MasterNode master
 Cluster cluster [0:1] -- [1:] SlaveNode slaves
 Cluster cluster [0:1] -- [1:] Database databases
 
-implementation mysqlMasterNode:
+implementation mysqlMasterNode for MasterNode,SlaveNode:
 
 	# Dependency with mysql entity
 	create_db_service = std::Service[host = self.host, name = "mysql_create_db"]
@@ -58,19 +58,19 @@ implementation mysqlMasterNode:
 
 	# Adjust my.cnf config file
 	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension.cnf", 
-	content = template("mysqlCluster/mycnf_extension_master.tmpl"), requires = [confd_dir], reload = true)
+	content = std::template("mysqlCluster/mycnf_extension_master.tmpl"), requires = [confd_dir], reload = true)
 	
 	# Write nodes file
 	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
-        content = template("mysqlCluster/nodes.tmpl"))
+        content = std::template("mysqlCluster/nodes.tmpl"))
 	
 	# Write master membership management script
 	master_script = std::File(host = self.host, path = "/usr/bin/send_state_to_new_slaves", owner = "root", group = "root",
-        mode = 755, content = file("mysqlCluster/send_state_to_new_slaves"))
+        mode = 755, content = std::file("mysqlCluster/send_state_to_new_slaves"))
 	
 	# Write unit file belonging to master membership management script
 	master_unit_file = std::File(host = self.host, path = "/lib/systemd/system/send_state_to_new_slaves.service", owner = "root",
-        group = "root", mode = 644, content = file("mysqlCluster/send_state_to_new_slaves.service"))
+        group = "root", mode = 644, content = std::file("mysqlCluster/send_state_to_new_slaves.service"))
 
 	# Make master membership management script a service
 	master_service = std::Service(host = self.host, name = "send_state_to_new_slaves", state = "running", onboot = true,
@@ -78,7 +78,7 @@ implementation mysqlMasterNode:
 	
 end
 
-implementation mysqlSlaveNode:
+implementation mysqlSlaveNode for MasterNode,SlaveNode:
 
 	# Dependency with mysql entity
 	create_db_service = std::Service[host = self.host, name = "mysql_create_db"]
@@ -87,26 +87,26 @@ implementation mysqlSlaveNode:
 
 	# Adjust my.cnf config file
 	mycnfExtension = std::ConfigFile(host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension.cnf", 
-	content = template("mysqlCluster/mycnf_extension_slave.tmpl"), requires = [confd_dir], reload = true)
+	content = std::template("mysqlCluster/mycnf_extension_slave.tmpl"), requires = [confd_dir], reload = true)
 
 	# Write nodes file
 	nodeFile = std::ConfigFile(host = self.host, path = "/etc/sysconfig/mysqlCluster", reload = true,
-        content = template("mysqlCluster/nodes.tmpl"))
+        content = std::template("mysqlCluster/nodes.tmpl"))
 		
 	# Write slave membership management script
 	slave_script = std::File(host = self.host, path = "/usr/bin/synchronize_state_with_master", owner = "root", group = "root",
-	mode = 755, content = file("mysqlCluster/synchronize_state_with_master"))
+	mode = 755, content = std::file("mysqlCluster/synchronize_state_with_master"))
 
 	# Write unit file belonging to slave membership management script
 	slave_unit_file = std::File(host = self.host, path = "/lib/systemd/system/synchronize_state_with_master.service", owner = "root",
-        group = "root", mode = 644, content = file("mysqlCluster/synchronize_state_with_master.service"))
+        group = "root", mode = 644, content = std::file("mysqlCluster/synchronize_state_with_master.service"))
 
 	# Make slave membership management script a service
 	slave_service = std::Service(host = self.host, name = "synchronize_state_with_master", state = "running", onboot = true,
         requires = [nodeFile, slave_script, slave_unit_file, mycnfExtension, mysqld, create_db_service])
 end
 
-implementation mysql:
+implementation mysql for MasterNode,SlaveNode:
     # Dependency with other entities
     mycnf_extension = std::File[host = self.host, path = "/etc/mysql.conf.d/99_mycnf_extension.cnf"]
 
@@ -115,34 +115,34 @@ implementation mysql:
     svc = std::Service(host = host, name = "mysqld", state = "running", onboot = true)
     svc.requires = [pkg, config, conf_dir, mycnf_extension]
 
-    config = std::ConfigFile(host = host, path = "/etc/my.cnf", content = template("mysqlCluster/my.cnf.tmpl"), 
+    config = std::ConfigFile(host = host, path = "/etc/my.cnf", content = std::template("mysqlCluster/my.cnf.tmpl"), 
     requires = pkg, reload = true)
     conf_dir = std::Directory(host = host, path = "/etc/mysql.conf.d", owner = "root", group = "root", mode = 755)
 
     dblist = std::ConfigFile(host = host, path = "/etc/sysconfig/mysql", reload = true,
-        content = template("mysqlCluster/databases.tmpl"))
+        content = std::template("mysqlCluster/databases.tmpl"))
 end
 
-implementation systemdCreate:
+implementation systemdCreate for MasterNode,SlaveNode:
     # Dependency with mysql entity
     mysqld = std::Service[host = self.host, name = "mysqld"]
 
     # install mysql db create script
     unit_file = std::File(host = host, path = "/lib/systemd/system/mysql_create_db.service", owner = "root",
-        group = "root", mode = 644, requires = script_file, content = file("mysqlCluster/mysql_create_db.service"))
+        group = "root", mode = 644, requires = script_file, content = std::file("mysqlCluster/mysql_create_db.service"))
 
     script_file = std::File(host = host, path = "/usr/bin/mysql_create_db", owner = "root", group = "root",
-        mode = 755, content = file("mysqlCluster/mysql_create_db"))
+        mode = 755, content = std::file("mysqlCluster/mysql_create_db"))
 
     db_file = std::File[host = self.host, path = "/etc/sysconfig/mysql"]
     svc_file = std::Service(host = host, name = "mysql_create_db", state = "running", onboot = true,
         requires = [unit_file, script_file, db_file, mysqld])
 end
 
-implementation sysvCreate:
-    mysqld_config = std::ConfigFile(host = host, path = "/etc/sysconfig/mysqld", content = file("mysqlCluster/mysqld_sysconfig"))
+implementation sysvCreate for MasterNode,SlaveNode:
+    mysqld_config = std::ConfigFile(host = host, path = "/etc/sysconfig/mysqld", content = std::file("mysqlCluster/mysqld_sysconfig"))
     script_file = std::File(host = host, path = "/usr/bin/mysql_create_db", owner = "root", group = "root",
-    mode = 755, content = file("mysqlCluster/mysql_create_db"))
+    mode = 755, content = std::file("mysqlCluster/mysql_create_db"))
 end
 
 implement MasterNode using systemdCreate when host.os is "fedora"
